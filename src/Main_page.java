@@ -138,7 +138,11 @@ public class Main_page extends Application
                     response.setText("Successfully signed in!");
 
                     admin_dashboard obj2 = new admin_dashboard();
-                    obj2.sceneView1(stage,mainpage);
+                    try {
+                        obj2.sceneView1(stage,mainpage);
+                    } catch (SQLException throwables) {
+                        throwables.printStackTrace();
+                    }
                 }
                 if(authentiction_result==0){
                     response.setTextFill(Color.RED);

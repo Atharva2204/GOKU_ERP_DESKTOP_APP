@@ -1,3 +1,4 @@
+import com.sun.glass.ui.Window;
 import javafx.application.Application;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -42,9 +43,13 @@ public class admin_dashboard
     Scene scene;
     Connection con = Database_Connection.getInstance().con;
     Stage stage;
+    String dept="",year="",deptname="";
 
-    public void sceneView1(Stage stage,Scene mainscene)
-    {
+    public void sceneView1(Stage stage,Scene mainscene) throws SQLException {
+
+
+        Statement statement = con.createStatement();
+        statement.executeUpdate("CREATE TABLE IF NOT EXISTS departments (`SrNo` INT NOT NULL AUTO_INCREMENT,`Department_Name` VARCHAR(100) NOT NULL,PRIMARY KEY(`SrNO`)); ");
         this.stage = stage;
 
         VBox rootnode = new VBox(10);
@@ -265,7 +270,7 @@ public class admin_dashboard
                     @Override
                     public void handle(ActionEvent actionEvent)
                     {
-                        int name_is_blank =0;
+                        int name_is_blank;
 
                         if(dept_name.getText().isBlank())
                         {
@@ -276,16 +281,42 @@ public class admin_dashboard
                         else
                         {
                             name_is_blank=0;
-                            String new_dept_name = dept_name.getText();
-                            try {
+                            String new_dept_name = dept_name.getText().trim();
+                            String fword="",sword="";
+
+                            if(new_dept_name.indexOf(' ') == -1)
+                            {
+                                fword=new_dept_name;
+                                sword = "Engineering";
+                                new_dept_name=new_dept_name+" "+sword;
+
+                            }
+                            else
+                            {
+                                fword = new_dept_name.substring(0,new_dept_name.indexOf(' '));
+                                sword = new_dept_name.substring(new_dept_name.indexOf(' ')+1);
+                                new_dept_name=fword+" "+sword;
+                            }
+
+                            try
+                            {
                                 Statement stmt = con.createStatement();
                                 Statement stmt2 = con.createStatement();
                                 stmt2.executeUpdate("ALTER TABLE departments AUTO_INCREMENT = 1;");
                                 Statement stmt3 = con.createStatement();
 
-                                String q="INSERT INTO departments (Department_Name) VALUES " + "('"+dept_name.getText()+"')"+";";
+                                String q="INSERT INTO departments (Department_Name) VALUES " + "('"+new_dept_name+"')"+";";
                                 //System.out.println(q);
                                 stmt.executeUpdate(q);
+
+
+                                String dept = fword+"_"+sword;
+
+                                Statement statement1 = con.createStatement();
+                                statement1.executeUpdate("CREATE TABLE fe_"+dept+" (`SrNo` INT NOT NULL AUTO_INCREMENT,`Subjects` VARCHAR(100) NOT NULL,PRIMARY KEY(`SrNo`));");
+                                statement1.executeUpdate("CREATE TABLE se_"+dept+" (`SrNo` INT NOT NULL AUTO_INCREMENT,`Subjects` VARCHAR(100) NOT NULL,PRIMARY KEY(`SrNo`));");
+                                statement1.executeUpdate("CREATE TABLE te_"+dept+" (`SrNo` INT NOT NULL AUTO_INCREMENT,`Subjects` VARCHAR(100) NOT NULL,PRIMARY KEY(`SrNo`));");
+                                statement1.executeUpdate("CREATE TABLE be_"+dept+" (`SrNo` INT NOT NULL AUTO_INCREMENT,`Subjects` VARCHAR(100) NOT NULL,PRIMARY KEY(`SrNo`));");
 
                                 ResultSet resultSet = stmt3.executeQuery("SELECT * FROM departments");
 
@@ -330,16 +361,16 @@ public class admin_dashboard
             }
         });
 
-        edit.setOnAction(new EventHandler<ActionEvent>() {
+        edit.setOnAction(new EventHandler<ActionEvent>()
+        {
             @Override
-            public void handle(ActionEvent actionEvent) {
+            public void handle(ActionEvent actionEvent)
+            {
                 edit.setDisable(true);
                 add.setDisable(true);
                 remove.setDisable(true);
                 if (edit.isDisabled() == true)
                 {
-
-
                     //tableView.setMouseTransparent(false);
                     tableView.setEditable(true);
 
@@ -359,6 +390,10 @@ public class admin_dashboard
                         try {
                             Statement stmt = con.createStatement();
                             stmt.executeUpdate("UPDATE departments SET Department_Name =" + "'" + new_dept + "'" + "WHERE SrNo = " + sr_no_of_edited_dept + ";");
+                            stmt.executeUpdate("RENAME TABLE fe_"+old_dept+" TO "+"fe_"+new_dept);
+                            stmt.executeUpdate("RENAME TABLE se_"+old_dept+" TO "+"fe_"+new_dept);
+                            stmt.executeUpdate("RENAME TABLE te_"+old_dept+" TO "+"fe_"+new_dept);
+                            stmt.executeUpdate("RENAME TABLE be_"+old_dept+" TO "+"fe_"+new_dept);
                         } catch (SQLException throwables) {
                             throwables.printStackTrace();
                         }
@@ -432,12 +467,20 @@ public class admin_dashboard
                                 public void handle(ActionEvent actionEvent) {
                                     department remov_dept = (department) tableView.getSelectionModel().getSelectedItem();
                                     int remove_dept_srno = remov_dept.srno;
+                                    String removed_dept = remov_dept.dept_name;
+                                    String fword = removed_dept.substring(0,removed_dept.indexOf(' '));
+                                    String sword = removed_dept.substring(removed_dept.indexOf(' ')+1);
+                                    String dept = fword+"_"+sword;
 
                                     //Statement remove_department = con.createStatement();
                                     try {
                                         Statement remove_department = con.createStatement();
                                         String removedeptquery = "DELETE FROM departments WHERE SrNo = " + remove_dept_srno + ";";
                                         remove_department.executeUpdate(removedeptquery);
+                                        remove_department.executeUpdate("DROP TABLE fe_"+dept+";");
+                                        remove_department.executeUpdate("DROP TABLE se_"+dept+";");
+                                        remove_department.executeUpdate("DROP TABLE te_"+dept+";");
+                                        remove_department.executeUpdate("DROP TABLE be_"+dept+";");
                                         tableView.getItems().clear();
 
                                     } catch (SQLException throwables) {
@@ -519,8 +562,14 @@ public class admin_dashboard
         GridPane rootnode = new GridPane();
         TableView sub = new TableView();
         TableColumn subj_name = new TableColumn("Subject Name");
+        subj_name.setCellValueFactory(new PropertyValueFactory<>("subject_name"));
+        TableColumn sr_no = new TableColumn("SrNo");
+        sr_no.setCellValueFactory(new PropertyValueFactory<>("SrNo"));
         sub.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        sub.getColumns().add(sr_no);
         sub.getColumns().add(subj_name);
+        subj_name.setResizable(true);
+
 
         rootnode.setHgap(10);
         rootnode.setVgap(10);
@@ -534,6 +583,9 @@ public class admin_dashboard
         Button edit = new Button("Edit Subject");
         Button remove = new Button("Remove Subject");
         Button back = new Button("BACK");
+
+        edit.setDisable(true);
+        remove.setDisable(true);
 
         add.setMaxWidth(Double.MAX_VALUE);
         edit.setMaxWidth(Double.MAX_VALUE);
@@ -553,7 +605,7 @@ public class admin_dashboard
             options1.add(dept_name);
         }
 
-        final ComboBox comboBox1 = new ComboBox(options1);
+         ComboBox comboBox1 = new ComboBox(options1);
         comboBox1.setPromptText("Select Department");
         comboBox1.setItems(options1);
 
@@ -562,9 +614,10 @@ public class admin_dashboard
                 "SE",
                 "TE","BE"
         );
-        final ComboBox comboBox2 = new ComboBox(options2);
+         ComboBox comboBox2 = new ComboBox(options2);
        comboBox2.setPromptText("Select Year");
         comboBox2.setItems(options2);
+
 
 
 
@@ -590,7 +643,55 @@ public class admin_dashboard
         stage.setScene(subjects);
         stage.show();
 
-        add.setOnAction(new EventHandler<ActionEvent>() {
+
+        //if(comboBox1.getValue()!=null)
+
+        comboBox1.setOnAction(new EventHandler<ActionEvent>()
+        {
+            @Override
+            public void handle(ActionEvent event)
+            {
+                sub.getItems().clear();
+
+
+                dept = comboBox1.getSelectionModel().getSelectedItem().toString();
+
+                if(!(comboBox2.getSelectionModel().isEmpty()))
+                    year = comboBox2.getSelectionModel().getSelectedItem().toString();
+
+                String firstword = dept.substring(0,dept.indexOf(' '));
+                String secondword = dept.substring(dept.indexOf(' ')+1,dept.length());
+
+                deptname = firstword+"_"+secondword;
+
+            }
+        });
+
+        comboBox2.setOnAction(new EventHandler<ActionEvent>()
+        {
+            @Override
+            public void handle(ActionEvent actionEvent)
+            {
+                sub.getItems().clear();
+                edit.setDisable(false);
+                remove.setDisable(false);
+                year = comboBox2.getSelectionModel().getSelectedItem().toString();
+                dept = comboBox1.getSelectionModel().getSelectedItem().toString();
+
+                retrieve_subjects(sub);
+
+
+
+
+
+            }
+        });
+
+
+
+
+        add.setOnAction(new EventHandler<ActionEvent>()
+        {
             @Override
             public void handle(ActionEvent actionEvent)
             {
@@ -621,7 +722,8 @@ public class admin_dashboard
                         departments.add(dept_name);
                     }
 
-                } catch (SQLException throwables) {
+                } catch (SQLException throwables)
+                {
                     throwables.printStackTrace();
                 }
 
@@ -635,6 +737,7 @@ public class admin_dashboard
 
                 year_select.setItems(years);
 
+
                 Button add = new Button("Add");
                 Label alert_msg = new Label("");          // Message for subject not entered
                 vBox.getChildren().addAll(select_department,year_select,add,alert_msg);
@@ -646,6 +749,8 @@ public class admin_dashboard
 
                 addsub.setScene(addsubscene);
                 addsub.show();
+
+
 
                 add.setOnAction(new EventHandler<ActionEvent>() {
                     @Override
@@ -659,17 +764,17 @@ public class admin_dashboard
                         }
                         else if(subjectname.getText().trim().isEmpty())
                         {
-                            alert_msg.setText("Subject taak na yedya");
+                            alert_msg.setText("Subject Name not mentioned!!");
                             alert_msg.setTextFill(Color.RED);
                         }
                         else if(select_department.getSelectionModel().isEmpty())
                         {
-                            alert_msg.setText("Department taak na yedya");
+                            alert_msg.setText("Department not selected!!");
                             alert_msg.setTextFill(Color.RED);
                         }
                         else if(year_select.getSelectionModel().isEmpty())
                         {
-                            alert_msg.setText("Year taak na yedya");
+                            alert_msg.setText("Year not selected!!");
                             alert_msg.setTextFill(Color.RED);
                         }
                         else {
@@ -677,12 +782,34 @@ public class admin_dashboard
                             String department = select_department.getSelectionModel().getSelectedItem().toString();
                             String year = year_select.getSelectionModel().getSelectedItem().toString();
                             String subject = subjectname.getText();
+                            int spaceindex = department.indexOf(' ');
+                            String firstword = department.substring(0,spaceindex);
+                            String secondword = department.substring(spaceindex+1,department.length());
+                            String dept = firstword+"_"+secondword;
+                            String tablename = year+"_"+dept;
 
-                            System.out.println(department);
-                            System.out.println(year);
-                            System.out.println(subject);
+                            try {
+                                Statement sub_table = con.createStatement();
+                                sub_table.executeUpdate("CREATE TABLE IF NOT EXISTS "+tablename+"(`SrNo` INT NOT NULL AUTO_INCREMENT,`Subjects` VARCHAR(100) NOT NULL,PRIMARY KEY(`SrNo`));");
+                                sub_table.executeUpdate("INSERT INTO "+tablename+ " (Subjects) "+ "VALUES"+"('"+subject+"');");
+
+                            } catch (SQLException throwables) {
+                                throwables.printStackTrace();
+                            }
+
+
+                            //System.out.println(department);
+                            //System.out.println(year);
+                            //System.out.println(subject);
 
                             addsub.close();
+                            sub.getItems().clear();
+                            if(!(comboBox1.getSelectionModel().isEmpty()) && !(comboBox2.getSelectionModel().isEmpty())) {
+                                if (department.contentEquals(comboBox1.getSelectionModel().getSelectedItem().toString())
+                                        && year.contentEquals(comboBox2.getSelectionModel().getSelectedItem().toString())) {
+                                    retrieve_subjects(sub);
+                                }
+                            }
                         }
                     }
                 });
@@ -695,12 +822,214 @@ public class admin_dashboard
 
 
 
+
+
+
+            }
+        });
+
+        edit.setOnAction(new EventHandler<ActionEvent>()
+        {
+
+
+            @Override
+            public void handle(ActionEvent actionEvent)
+            {
+                edit.setDisable(true);
+                add.setDisable(true);
+                remove.setDisable(true);
+
+                if(edit.isDisabled()==true)
+                {
+                    sub.setEditable(true);
+                    subj_name.setCellFactory(TextFieldTableCell.forTableColumn());
+
+                    subj_name.setOnEditCommit(new EventHandler<TableColumn.CellEditEvent>()
+                    {
+                        @Override
+                        public void handle(TableColumn.CellEditEvent cellEditEvent)
+                        {
+                            String old_subject_name = (String) cellEditEvent.getOldValue();
+                            String new_subject_name = (String) cellEditEvent.getNewValue();
+
+                            subject edited_subj= (subject) cellEditEvent.getRowValue();
+                            int srno = edited_subj.SrNo;
+                            String selected_dept = comboBox1.getSelectionModel().getSelectedItem().toString().toLowerCase();
+                            String selected_year = comboBox2.getSelectionModel().getSelectedItem().toString().toLowerCase();
+                            String fword = selected_dept.substring(0,selected_dept.indexOf(' '));
+                            String sword = selected_dept.substring(selected_dept.indexOf(' ')+1);
+                            String deptname = fword+"_"+sword;
+                            String tablename = selected_year+"_"+deptname;
+
+                            Statement edit_suject = null;
+                            try {
+                                edit_suject = con.createStatement();
+                                edit_suject.executeUpdate("UPDATE "+tablename+" SET Subjects ='"+new_subject_name+"' WHERE SrNo="+srno+";");
+                            } catch (SQLException throwables) {
+                                throwables.printStackTrace();
+                            }
+
+                            sub.setEditable(false);
+                            sub.getSelectionModel().clearSelection();
+                            add.setDisable(false);
+                            edit.setDisable(false);
+                            remove.setDisable(false);
+
+
+
+                        }
+                    });
+                }
+
+
+
+
+            }
+        });
+
+        remove.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent)
+            {
+                add.setDisable(true);
+                remove.setDisable(true);
+                edit.setDisable(true);
+
+                sub.setOnMouseClicked(new EventHandler<MouseEvent>() {
+                    @Override
+                    public void handle(MouseEvent mouseEvent)
+                    {
+                        String selected_dept = comboBox1.getSelectionModel().getSelectedItem().toString().toLowerCase();
+                        String selected_year = comboBox2.getSelectionModel().getSelectedItem().toString().toLowerCase();
+                        String fword = selected_dept.substring(0,selected_dept.indexOf(' '));
+                        String sword = selected_dept.substring(selected_dept.indexOf(' ')+1);
+                        String deptname = fword+"_"+sword;
+                        String tablename = selected_year+"_"+deptname;
+
+                        if(mouseEvent.getClickCount() == 2 && remove.isDisabled() == true)
+                        {
+                            Stage deleteprompt = new Stage();
+
+                            VBox promptbox = new VBox(10);
+                            promptbox.setAlignment(Pos.CENTER);
+                            HBox hBox = new HBox(10);
+                            hBox.setAlignment(Pos.CENTER);
+
+
+                            deleteprompt.initModality(Modality.APPLICATION_MODAL);
+
+                            Label displaymsg = new Label();
+                            displaymsg.setWrapText(true);
+                            displaymsg.setTextAlignment(TextAlignment.CENTER);
+                            displaymsg.setText("Are you sure you want to delete this selected Subject ?");
+                            Button yes = new Button("Yes");
+                            Button no = new Button("No");
+
+
+                            hBox.getChildren().addAll(yes, no);
+                            promptbox.getChildren().addAll(displaymsg, hBox);
+
+                            Scene promptscene = new Scene(promptbox, 200, 200);
+
+                            deleteprompt.setScene(promptscene);
+                            deleteprompt.show();
+
+                            yes.setOnAction(new EventHandler<ActionEvent>() {
+                                @Override
+                                public void handle(ActionEvent actionEvent)
+                                {
+                                    subject remove_subject = (subject) sub.getSelectionModel().getSelectedItem();
+                                    int srno = remove_subject.SrNo;
+
+                                    try {
+                                        Statement statement = con.createStatement();
+
+                                        statement.executeUpdate("DELETE FROM "+tablename+" WHERE SrNo = "+ srno+";");
+
+                                        ResultSet resultSet1 = statement.executeQuery("SELECT * FROM "+tablename+";");
+
+                                        sub.getItems().clear();
+
+                                        while(resultSet1.next())
+                                        {
+                                            int SrNo = resultSet1.getInt("SrNo");
+                                            String subject_name = resultSet1.getString("Subjects");
+
+                                            subject s = new subject(SrNo, subject_name);
+
+                                            sub.getItems().add(s);
+
+
+                                        }
+
+                                    } catch (SQLException throwables)
+                                    {
+                                        throwables.printStackTrace();
+                                    }
+                                    add.setDisable(false);
+                                    edit.setDisable(false);
+                                    remove.setDisable(false);
+                                    deleteprompt.close();
+
+
+
+                                }
+                            });
+                            no.setOnAction(new EventHandler<ActionEvent>() {
+                                @Override
+                                public void handle(ActionEvent actionEvent)
+                                {
+                                    add.setDisable(false);
+                                    edit.setDisable(false);
+                                    remove.setDisable(false);
+                                    deleteprompt.close();
+
+
+                                }
+                            });
+
+
+
+
+                        }
+                    }
+                });
             }
         });
 
 
 
 
+    }
+    public void retrieve_subjects(TableView sub)
+    {
+        if (dept != "" && year != "") {
+            //System.out.println("inside if");
+
+            String tablename = year + "_" + deptname;
+
+            Statement showtable = null;
+            try {
+
+                showtable = con.createStatement();
+                ResultSet resultSet1 = showtable.executeQuery("SELECT * FROM " + tablename + ";");
+
+
+                while (resultSet1.next()) {
+                    int SrNo = resultSet1.getInt("SrNo");
+                    String subject_name = resultSet1.getString("Subjects");
+
+                    subject s = new subject(SrNo, subject_name);
+
+                    sub.getItems().add(s);
+
+                }
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+            }
+
+
+        }
     }
 }
 
