@@ -1,5 +1,6 @@
 import com.sun.glass.ui.Window;
 import javafx.application.Application;
+import javafx.beans.Observable;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -31,6 +32,7 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 import javax.swing.*;
+import javax.swing.plaf.basic.BasicInternalFrameTitlePane;
 import javax.xml.transform.Result;
 import java.awt.*;
 import java.sql.Connection;
@@ -69,25 +71,26 @@ public class admin_dashboard
         Button view_teachers = new Button("View Teachers");
         Button departments = new Button("Departments");
         Button subjects = new Button("Subjects");
-        Button division = new Button("Division");
         Button logout = new Button("LOGOUT");
 
         view_students.setMaxWidth(100);
         view_teachers.setMaxWidth(100);
         departments.setMaxWidth(100);
         subjects.setMaxWidth(100);
-        division.setMaxWidth(100);
         logout.setMaxWidth(100);
 
-        rootnode.getChildren().addAll(view_students,view_teachers,departments,subjects,division,logout);
+        rootnode.getChildren().addAll(view_students,view_teachers,departments,subjects,logout);
 
         view_students.setOnAction(new EventHandler<ActionEvent>()
         {
             @Override
             public void handle(ActionEvent actionEvent)
             {
-
-
+                try {
+                    student(stage);
+                } catch (SQLException throwables) {
+                    throwables.printStackTrace();
+                }
             }
         });
 
@@ -127,14 +130,6 @@ public class admin_dashboard
             }
         });
 
-        division.setOnAction(new EventHandler<ActionEvent>()
-        {
-            @Override
-            public void handle(ActionEvent actionEvent)
-            {
-
-            }
-        });
 
         logout.setOnAction(new EventHandler<ActionEvent>()
         {
@@ -556,6 +551,220 @@ public class admin_dashboard
 
     }
 
+    public void student(Stage stage) throws SQLException
+    {
+
+        GridPane root = new GridPane();
+
+        root.setHgap(10);
+        root.setVgap(10);
+
+        ComboBox dept_combobox = new ComboBox();
+        ComboBox year_combobox = new ComboBox();
+        ComboBox division_combobox = new ComboBox();
+
+        ObservableList years = FXCollections.observableArrayList("FE","SE","TE","BE");
+        ObservableList division = FXCollections.observableArrayList("A","B");
+
+        ObservableList depts = FXCollections.observableArrayList();
+
+        Statement statement = con.createStatement();
+
+        ResultSet resultSet = statement.executeQuery("SELECT Department_Name FROM departments");
+
+        while(resultSet.next())
+        {
+            String dept_name = resultSet.getString("Department_Name");
+            depts.add(dept_name);
+        }
+
+        dept_combobox.setItems(depts);
+        division_combobox.setItems(division);
+        year_combobox.setItems(years);
+
+        Button add = new Button("ADD");
+        Button info = new Button("STUDENT INFO");
+        Button remove = new Button("REMOVE");
+        Button back = new Button("BACK");
+        add.setMaxWidth(Double.MAX_VALUE);
+        info.setMaxWidth(Double.MAX_VALUE);
+        remove.setMaxWidth(Double.MAX_VALUE);
+
+        VBox vBox = new VBox(15);
+        vBox.setAlignment(Pos.CENTER);
+        vBox.getChildren().addAll(add,info,remove);
+
+        HBox hBox = new HBox(10);
+        hBox.getChildren().addAll(dept_combobox,year_combobox,division_combobox);
+
+
+        TableView stud_detail = new TableView();
+
+        root.add(back,2,2);
+       /* root.add(dept_combobox,1,0);
+        root.add(year_combobox,2,0);
+        root.add(division_combobox,3,0);*/
+        root.add(hBox,3,2);
+        root.add(stud_detail,3,3);
+        root.add(vBox,4,3);
+
+        TableColumn UID = new TableColumn("UID");
+        TableColumn first_name = new TableColumn("FIRST NAME");
+        TableColumn middle_name = new TableColumn("MIDDLE NAME");
+        TableColumn last_name = new TableColumn("LAST NAME");
+        TableColumn dob = new TableColumn("DOB");
+        TableColumn mob = new TableColumn("MOBILE NO.");
+        TableColumn email_id = new TableColumn("EMAIL-ID");
+
+        UID.setPrefWidth(100);
+        first_name.setPrefWidth(200);
+        middle_name.setPrefWidth(200);
+        last_name.setPrefWidth(200);
+        dob.setPrefWidth(100);
+        mob.setPrefWidth(100);
+        email_id.setPrefWidth(200);
+
+        stud_detail.getColumns().addAll(UID,first_name,middle_name,last_name,dob,mob,email_id);
+
+
+
+
+        Scene students = new Scene(root,600,600);
+
+        stage.setScene(students);
+        stage.show();
+        stage.setMaximized(true);
+
+        add.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent)
+            {
+                //Scene add_student = new Scene();
+                stage.setMaximized(false);
+                GridPane root = new GridPane();
+                root.setHgap(10);
+                root.setVgap(10);
+
+                Button back = new Button("BACK");
+
+
+
+                VBox vBox = new VBox(20);
+
+                Label first_name = new Label("First Name");
+                TextField first_name_text = new TextField();
+
+                first_name_text.setPrefWidth(200);
+
+                HBox fname = new HBox(75);
+
+                fname.getChildren().addAll(first_name,first_name_text);
+
+                Label middle_name = new Label("Middle Name");
+                TextField middle_name_text = new TextField();
+
+                middle_name_text.setPrefWidth(200);
+
+                HBox mname = new HBox(60);
+
+                mname.getChildren().addAll(middle_name,middle_name_text);
+
+                Label last_name = new Label("Last Name");
+                TextField last_name_text = new TextField();
+
+                last_name_text.setPrefWidth(200);
+
+                HBox lname = new HBox(76);
+
+                lname.getChildren().addAll(last_name,last_name_text);
+
+                Label  date_of_birth= new Label("Date Of Birth");
+                DatePicker datePicker = new DatePicker();
+
+
+                HBox dob = new HBox(62);
+
+                dob.getChildren().addAll(date_of_birth,datePicker);
+
+                Label mobile_no = new Label("Mobile no.");
+                TextField mob_no_text = new TextField();
+
+                mob_no_text.setPrefWidth(200);
+
+                HBox mob_no = new HBox(75);
+
+                mob_no.getChildren().addAll(mobile_no,mob_no_text);
+
+                Label alt_mob_no = new Label("Alternative Mobile No.");
+                TextField alt_mob_no_text = new TextField();
+
+                alt_mob_no_text.setPrefWidth(200);
+
+                HBox alt_mob = new HBox(10);
+
+                alt_mob.getChildren().addAll(alt_mob_no,alt_mob_no_text);
+
+                Label email = new Label("Email");
+                TextField email_text = new TextField();
+
+
+                email_text.setPrefWidth(200);
+
+                HBox email_id = new HBox(100);
+
+                email_id.getChildren().addAll(email,email_text);
+
+                vBox.getChildren().addAll(fname,mname,lname,dob,mob_no,alt_mob,email_id);
+
+
+                ComboBox dept = new ComboBox();
+                ObservableList deptnames = FXCollections.observableArrayList();
+
+                try {
+                    Statement stmt = con.createStatement();
+                    ResultSet resultSet1 = stmt.executeQuery("SELECT Department_Name FROM departments");
+                    while (resultSet1.next())
+                    {
+                        String dept_name = resultSet1.getString("Department_Name");
+                        deptnames.add(dept_name);
+
+                    }
+
+                    dept.setItems(deptnames);
+                } catch (SQLException throwables) {
+                    throwables.printStackTrace();
+                }
+
+                Label department = new Label("Department");
+
+                HBox deptfield = new HBox(30);
+
+                deptfield.getChildren().addAll(department,dept);
+
+                vBox.getChildren().add(deptfield);
+
+
+                root.add(vBox,1,1);
+                root.add(back,0,0);
+
+                Scene add_student = new Scene(root,600,600);
+
+                stage.setScene(add_student);
+
+                stage.setMaximized(true);
+
+                stage.show();
+
+
+
+                //stage.setMaximized(true);
+
+
+            }
+        });
+
+    }
+
     public void Subjects(Stage stage) throws SQLException
     {
         //Stage subj_stage = new Stage();
@@ -777,7 +986,8 @@ public class admin_dashboard
                             alert_msg.setText("Year not selected!!");
                             alert_msg.setTextFill(Color.RED);
                         }
-                        else {
+                        else
+                            {
 
                             String department = select_department.getSelectionModel().getSelectedItem().toString();
                             String year = year_select.getSelectionModel().getSelectedItem().toString();
@@ -804,34 +1014,22 @@ public class admin_dashboard
 
                             addsub.close();
                             sub.getItems().clear();
-                            if(!(comboBox1.getSelectionModel().isEmpty()) && !(comboBox2.getSelectionModel().isEmpty())) {
+                            if(!(comboBox1.getSelectionModel().isEmpty()) && !(comboBox2.getSelectionModel().isEmpty()))
+                            {
                                 if (department.contentEquals(comboBox1.getSelectionModel().getSelectedItem().toString())
-                                        && year.contentEquals(comboBox2.getSelectionModel().getSelectedItem().toString())) {
+                                        && year.contentEquals(comboBox2.getSelectionModel().getSelectedItem().toString()))
+                                {
                                     retrieve_subjects(sub);
                                 }
                             }
                         }
                     }
                 });
-
-
-
-
-
-
-
-
-
-
-
-
             }
         });
 
         edit.setOnAction(new EventHandler<ActionEvent>()
         {
-
-
             @Override
             public void handle(ActionEvent actionEvent)
             {
@@ -958,8 +1156,6 @@ public class admin_dashboard
                                             subject s = new subject(SrNo, subject_name);
 
                                             sub.getItems().add(s);
-
-
                                         }
 
                                     } catch (SQLException throwables)
@@ -970,9 +1166,6 @@ public class admin_dashboard
                                     edit.setDisable(false);
                                     remove.setDisable(false);
                                     deleteprompt.close();
-
-
-
                                 }
                             });
                             no.setOnAction(new EventHandler<ActionEvent>() {
@@ -996,16 +1189,13 @@ public class admin_dashboard
                 });
             }
         });
-
-
-
-
     }
+
     public void retrieve_subjects(TableView sub)
     {
-        if (dept != "" && year != "") {
+        if (dept != "" && year != "")
+        {
             //System.out.println("inside if");
-
             String tablename = year + "_" + deptname;
 
             Statement showtable = null;
@@ -1014,8 +1204,8 @@ public class admin_dashboard
                 showtable = con.createStatement();
                 ResultSet resultSet1 = showtable.executeQuery("SELECT * FROM " + tablename + ";");
 
-
-                while (resultSet1.next()) {
+                while (resultSet1.next())
+                {
                     int SrNo = resultSet1.getInt("SrNo");
                     String subject_name = resultSet1.getString("Subjects");
 
@@ -1024,7 +1214,8 @@ public class admin_dashboard
                     sub.getItems().add(s);
 
                 }
-            } catch (SQLException throwables) {
+            } catch (SQLException throwables)
+            {
                 throwables.printStackTrace();
             }
 
